@@ -1,13 +1,13 @@
 services:
   app:
     container_name: nextcloud
-    image: arm32v7/nextcloud
+    image: nextcloud
     restart: unless-stopped
     environment:
-      - PG_DATABASE=nextclouddb
-      - PG_USER=nextcloud
-      - PG_PASSWORD=nextcloud
-      - PG_HOST=db
+      - POSTGRES_HOST=db
+      - POSTGRES_DATABASE=nextclouddb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NEXTCLOUD_ADMIN_USER=ncadmin
       - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - REDIS_HOST=redis
@@ -22,27 +22,32 @@ services:
       - db
       - redis
     volumes:
-      - nextcloud:/var/www/html
+    #   - nextcloud:/var/www/html
+      - /mnt/goflex/nextcloud/html:/var/www/html
+      - /mnt/goflex/nextcloud/custom_apps:/var/www/html/custom_apps
+      - /mnt/goflex/nextcloud/config:/var/www/html/config
+      - /mnt/goflex/nextcloud/data:/var/www/html/data
     env_file:
       - .env
 
   db:
     container_name: ncdb
-    image: arm32v7/postgres
+    image: postgres
     restart: unless-stopped
+    ports:
+      - 5432:5432
     environment:
-      - PG_DATABASE=nextclouddb
-      - PG_USER=nextcloud
-      - PG_PASSWORD=nextcloud
-      - PG_ROOT_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_DB=nextclouddb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - /media/nextclouddrive/data:/var/lib/postgresql/data
+      - /mnt/goflex/nextcloud/ncddata:/var/lib/postgresql/data
     env_file:
       - .env
 
   redis:
     container_name: ncredis
-    image: arm32v7/redis
+    image: redis
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
     env_file:
@@ -51,6 +56,7 @@ services:
 volumes:
   db:
   nextcloud:
+  redis:
 
 networks:
   default:
