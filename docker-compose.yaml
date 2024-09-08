@@ -43,6 +43,7 @@ services:
       - PGDATA="/var/lib/postgresql/data"
     volumes:
       #- /mnt/goflex/nextcloud/postgres:/var/lib/postgresql
+      - /mnt/goflex/nextcloud/postgres/postgresql.conf:/etc/postgresql.conf
       - /mnt/goflex/nextcloud/postgres/data:/var/lib/postgresql/data
     env_file:
       - .env
