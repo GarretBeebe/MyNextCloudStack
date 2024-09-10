@@ -40,8 +40,6 @@ services:
       - REDIS_HOST_PASSWORD=${REDIS_PASSWORD}
     ports:
       - 5080:80
-    expose:
-      - '5080'
     links:
       - db
       - redis
