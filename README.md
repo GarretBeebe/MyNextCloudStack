@@ -59,6 +59,9 @@ To view logs for a specific service, use:
 ```bash
 docker-compose logs <service-name>
 ```
+# Security
+
+This Nextcloud implementation does not utilize https. It is highly recommended to configure https for production use. It is possible to use Nginx Proxy Manager to manage secure connections to your nextcloud instance. Future iterations of this project will include NPM and a proxy host configuration.
 
 # License
 This project is licensed under the MIT License.
