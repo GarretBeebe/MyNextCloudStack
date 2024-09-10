@@ -16,7 +16,7 @@ cd MyNextCloudStack
 ```
 # Configuration
 
-Make sure to configure any necessary environment variables. Copy the .env.example file to .env and adjust the values as needed:
+Make sure to configure any necessary environment variables. Copy the env.example file to .env and adjust the values as needed:
 
 ```bash
 cp .env.example .env
