@@ -63,6 +63,20 @@ docker-compose logs <service-name>
 
 This Nextcloud implementation does not utilize https. It is highly recommended to configure https for production use. It is possible to use Nginx Proxy Manager to manage secure connections to your nextcloud instance. Future iterations of this project will include NPM and a proxy host configuration.
 
+# Post Install Scripts
+
+```bash
+sudo docker exec -it ncdb psql -U postgres -d nextclouddb
+```
+
+```bash
+sudo docker exec -it ncdb psql -U postgres
+```
+
+```bash
+sudo docker exec -u www-data nextcloud php /var/www/html/occ db:add-missing-indices 
+```
+
 # License
 This project is licensed under the MIT License.
 
