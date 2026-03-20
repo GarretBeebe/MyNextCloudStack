@@ -3,6 +3,12 @@ services:
     container_name: ncdb
     image: postgres:15-bookworm
     restart: unless-stopped
+    command: > 
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=512MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=64MB
     ports:
       - 5432:5432
     environment:
@@ -32,7 +38,7 @@ services:
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=nextclouddb
-      - POSTGRES_USER=nextcloud
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NEXTCLOUD_ADMIN_USER=ncadmin
       - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -61,6 +67,20 @@ services:
       - 192.168.68.70
       - 1.1.1.1
 
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+   
+  cron:
+    image: nextcloud:33
+    container_name: nextcloud-cron
+    restart: unless-stopped
+    volumes:
+      - ./html:/var/www/html
+      - ${HOST_NEXTCLOUD_DATA_DIR}:/var/www/html/data
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
     labels:
       - com.centurylinklabs.watchtower.enable=false
 
