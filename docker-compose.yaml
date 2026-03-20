@@ -32,7 +32,7 @@ services:
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=nextclouddb
-      - POSTGRES_USER=postgres
+      - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NEXTCLOUD_ADMIN_USER=ncadmin
       - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
