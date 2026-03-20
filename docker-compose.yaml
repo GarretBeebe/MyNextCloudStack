@@ -9,29 +9,26 @@ services:
       - POSTGRES_DB=nextclouddb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - PGDATA=/var/lib/postgresql/data
     volumes:
-      - ./init_db.sh:/docker-entrypoint-initdb.d/init_db.sh
       - ${HOST_POSTGRES_DATA_DIR}:/var/lib/postgresql/data
-    env_file:
-      - .env
     labels:
-      - com.centurylinklabs.watchtower.enable=false 
+      - com.centurylinklabs.watchtower.enable=false
 
   redis:
     container_name: ncredis
-    image: redis:latest
+    image: redis:7
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
-    env_file:
-      - .env  
     labels:
       - com.centurylinklabs.watchtower.enable=false
 
   app:
     container_name: nextcloud
-    image: nextcloud:32.0.6
+    image: nextcloud:33
     restart: unless-stopped
+    ports:
+      - 5080:80
+
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=nextclouddb
@@ -40,8 +37,9 @@ services:
       - NEXTCLOUD_ADMIN_USER=ncadmin
       - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - REDIS_HOST_PASSWORD=${REDIS_PASSWORD}
+
+      # SMTP
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_NAME=${SMTP_NAME}
@@ -49,34 +47,24 @@ services:
       - SMTP_AUTHTYPE=${SMTP_AUTHTYPE}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
       - MAIL_DOMAIN=${MAIL_DOMAIN}
-    ports:
-      - 5080:80
-    links:
-      - db
-      - redis
+
+    volumes:
+      - ./html:/var/www/html
+      - ${HOST_NEXTCLOUD_DATA_DIR}:/var/www/html/data
+      - /home/garret/NextCloud/php/zzz-opcache-tuning.ini:/usr/local/etc/php/conf.d/zzz-opcache-tuning.ini:ro
+
     depends_on:
       - db
       - redis
-    volumes:
-      - ./html:/var/www/html
-      - ./custom_apps:/var/www/html/custom_apps
-      - ./config:/var/www/html/config
-      - ${HOST_NEXTCLOUD_DATA_DIR}:/var/www/html/data
-      - /home/garret/NextCloud/php/zzz-opcache-tuning.ini:/usr/local/etc/php/conf.d/zzz-opcache-tuning.ini:ro
-    env_file:
-      - .env
+
     dns:
+      - 192.168.68.70
       - 1.1.1.1
+
     labels:
       - com.centurylinklabs.watchtower.enable=false
-
-volumes:
-  db:
-  nextcloud:
-  redis:
 
 networks:
   default:
     name: nextcloud
     driver: bridge
-
