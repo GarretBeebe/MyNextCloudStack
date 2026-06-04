@@ -1,95 +1,88 @@
-Docker Compose Project
-This repository contains a Docker Compose configuration for setting up [Your Application Name]. It also includes an initialization script to configure the environment.
+# MyNextCloudStack
 
-Prerequisites
-Before you start, ensure you have the following installed:
+A Docker Compose stack running [Nextcloud](https://nextcloud.com/) with PostgreSQL, Redis, and a background cron worker.
 
-Docker (version 20.10 or higher)
-Docker Compose (version 1.27 or higher)
-Getting Started
-Clone the Repository
+## Services
 
-bash
-Copy code
-git clone https://github.com/yourusername/your-repository.git
-cd your-repository
-Configuration
+| Service | Image | Port |
+|---|---|---|
+| `app` | `nextcloud:33.0.5` | `5080` → 80 |
+| `db` | `postgres:15.17-bookworm` | `5432` → 5432 |
+| `redis` | `redis:7.4.8-bookworm` | — |
+| `cron` | `nextcloud:33.0.5` | — |
 
-Make sure to configure any necessary environment variables. Copy the .env.example file to .env and adjust the values as needed:
+All services share a bridge network named `nextcloud`.
 
-bash
-Copy code
+## Prerequisites
+
+- Docker (20.10+)
+- Docker Compose v2
+
+## Configuration
+
+Copy `.env.example` to `.env` and fill in all values before starting:
+
+```bash
 cp .env.example .env
-Initialization
+```
 
-Run the init.sh script to set up your environment:
+### Environment variables
 
-bash
-Copy code
-chmod +x init.sh
-./init.sh
-Start the Services
+| Variable | Description |
+|---|---|
+| `NEXTCLOUD_ADMIN_USER` | Nextcloud admin username |
+| `ADMIN_PASSWORD` | Nextcloud admin password |
+| `POSTGRES_DB` | PostgreSQL database name |
+| `POSTGRES_USER` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `REDIS_PASSWORD` | Redis auth password |
+| `HOST_POSTGRES_DATA_DIR` | Host path for PostgreSQL data volume |
+| `HOST_NEXTCLOUD_DATA_DIR` | Host path for Nextcloud user data volume |
+| `HOST_PHP_INI_PATH` | Host path to `zzz-opcache-tuning.ini` |
+| `DNS_SERVER` | DNS server IP for the Nextcloud app container |
+| `SMTP_HOST` | SMTP server hostname |
+| `SMTP_PORT` | SMTP port (typically 587) |
+| `SMTP_AUTHTYPE` | SMTP auth type (e.g. `LOGIN`) |
+| `SMTP_NAME` | SMTP login username |
+| `SMTP_PASSWORD` | SMTP password or app password |
+| `MAIL_FROM_ADDRESS` | Local part of the from address (no `@domain`) |
+| `MAIL_DOMAIN` | Domain part of the from address |
 
-Use Docker Compose to build and start the services defined in docker-compose.yml:
+## Deployment
 
-bash
-Copy code
-docker-compose up --build
-By default, this will start the containers in the foreground. To run them in the background, add the -d flag:
+Start all services in detached mode:
 
-bash
-Copy code
-docker-compose up --build -d
-Access the Application
+```bash
+docker compose up -d
+```
 
-After starting the services, you can access your application at http://localhost:8080 (or the port specified in your docker-compose.yml file).
+Nextcloud will be available at `http://<host-ip>:5080`.
 
-Stopping the Services
+On first run, Nextcloud uses the `NEXTCLOUD_ADMIN_USER` / `ADMIN_PASSWORD` and database env vars to initialize automatically — no manual setup wizard needed.
 
-To stop and remove the running containers, use:
+## Stopping
 
-bash
-Copy code
-docker-compose down
-Logs
+```bash
+docker compose down
+```
 
-View logs for all services with:
+To also remove volumes (destructive — data loss):
 
-bash
-Copy code
-docker-compose logs
-To view logs for a specific service, use:
+```bash
+docker compose down -v
+```
 
-bash
-Copy code
-docker-compose logs <service-name>
-init.sh Script
-The init.sh script is used to configure your environment before starting the Docker containers. It performs tasks such as setting up database schemas, applying migrations, or other initialization steps required by your application.
+## Logs
 
-Usage
-Make the Script Executable
+```bash
+# All services
+docker compose logs -f
 
-bash
-Copy code
-chmod +x init.sh
-Run the Script
+# Specific service
+docker compose logs -f app
+docker compose logs -f db
+```
 
-bash
-Copy code
-./init.sh
-Ensure the script is run before starting the Docker Compose services to ensure everything is properly initialized.
+## PHP / OPcache tuning
 
-Troubleshooting
-Docker Daemon Issues: Ensure Docker is running on your machine.
-Port Conflicts: Check if the ports specified in docker-compose.yml are available and not in use by other services.
-Permission Issues: Ensure you have the necessary permissions to run Docker commands and execute scripts.
-Contributing
-Contributions are welcome! Please fork the repository and submit a pull request with your changes. Ensure to follow the coding standards and include appropriate tests for your contributions.
-
-License
-This project is licensed under the MIT License.
-
-Contact
-For any questions or issues, please contact your-email@example.com.
-
-Feel free to customize this template according to your specific Docker Compose setup and initialization script details.
+The `app` and `cron` containers mount `php/zzz-opcache-tuning.ini` (path set via `HOST_PHP_INI_PATH`) as a read-only PHP config override. Edit that file to adjust OPcache and JIT settings without rebuilding the image.
