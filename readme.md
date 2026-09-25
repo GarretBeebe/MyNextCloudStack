@@ -6,17 +6,17 @@ A Docker Compose stack running [Nextcloud](https://nextcloud.com/) with PostgreS
 
 | Service | Image | Port |
 |---|---|---|
-| `app` | `nextcloud:33.0.5` | `5080` → 80 |
+| `app` | `nextcloud:34.0.4` | `127.0.0.1:5080` → 80 |
 | `db` | `postgres:15.17-bookworm` | `127.0.0.1:5432` → 5432 |
 | `redis` | `redis:7.4.8-bookworm` | — |
-| `cron` | `nextcloud:33.0.5` | — |
+| `cron` | `nextcloud:34.0.4` | — |
 
 All services share a bridge network named `nextcloud`.
 
 ## Prerequisites
 
-- Docker (20.10+)
-- Docker Compose v2
+- Docker Engine 25+ (the `app` healthcheck uses `start_interval`)
+- Docker Compose v2, recent enough to support `start_interval` (tested with v5.5.1)
 
 ## Configuration
 
@@ -56,7 +56,9 @@ Start all services in detached mode:
 docker compose up -d
 ```
 
-Nextcloud will be available at `http://<host-ip>:5080`.
+Port 5080 is bound to `127.0.0.1` only, so Nextcloud isn't reachable from the LAN directly: serve it through a reverse proxy on the same host (this setup uses Caddy with host networking). See [Reverse proxy & client IPs](#reverse-proxy--client-ips).
+
+On `docker compose up`, `cron` starts only after `app` passes its healthcheck (installed, not in maintenance mode, no pending DB upgrade), so an image upgrade finishes before background jobs resume. After a host reboot Docker starts both at once; `cron.php` then skips runs on its own while an upgrade is pending or maintenance mode is on. The healthcheck greps the JSON from `status.php`, so if a future image changes that output, update the check in `docker-compose.yaml`.
 
 On first run, Nextcloud uses the `NEXTCLOUD_ADMIN_USER` / `ADMIN_PASSWORD` and database env vars to initialize automatically — no manual setup wizard needed.
 
@@ -86,3 +88,13 @@ docker compose logs -f db
 ## PHP / OPcache tuning
 
 The `app` and `cron` containers mount `php/zzz-opcache-tuning.ini` (path set via `HOST_PHP_INI_PATH`) as a read-only PHP config override. Edit that file to adjust OPcache and JIT settings without rebuilding the image.
+
+## Apache worker limits
+
+`apache/mpm_prefork.conf` is mounted over the image's prefork config. `MaxRequestWorkers 40` keeps concurrent requests below PostgreSQL's 100 connections and bounds RAM use; `MaxConnectionsPerChild 1000` recycles workers periodically. After an image upgrade, check that the image still reads `/etc/apache2/mods-available/mpm_prefork.conf`.
+
+## Reverse proxy & client IPs
+
+- The reverse proxy (here, Caddy on the host network) proxies to `127.0.0.1:5080`; Docker delivers that traffic from the `nextcloud` bridge's gateway address.
+- Set `trusted_proxies` in `config.php` to `172.16.0.0/12` (`docker exec -u www-data nextcloud php occ config:system:set trusted_proxies 0 --value=172.16.0.0/12`). The range covers Docker's default 172.17–172.31 bridge subnets, so it keeps working if `docker compose down`/`up` gives the network a new subnet. This is safe only because port 5080 is bound to `127.0.0.1` and Docker isolates other bridge networks. Once the 172.x range is used up, Docker hands out `192.168.x.0/20` subnets instead; if this network ever lands there, Nextcloud would see every client as the gateway IP, so pin the subnet in `docker-compose.yaml` at that point.
+- `APACHE_DISABLE_REWRITE_IP=1` disables the image's Apache `remoteip` config, which trusts a client-supplied `X-Real-IP` header and would let anyone spoof their IP. Client IPs come from the reverse proxy's `X-Forwarded-For` instead. Any value disables it; remove the variable to re-enable.

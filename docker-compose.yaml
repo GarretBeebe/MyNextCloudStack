@@ -5,6 +5,7 @@ x-nextcloud: &nextcloud
     - ./html:/var/www/html
     - ${HOST_NEXTCLOUD_DATA_DIR}:/var/www/html/data
     - ${HOST_PHP_INI_PATH}:/usr/local/etc/php/conf.d/zzz-opcache-tuning.ini:ro
+    - ./apache/mpm_prefork.conf:/etc/apache2/mods-available/mpm_prefork.conf:ro
   depends_on:
     db:
       condition: service_healthy
@@ -54,7 +55,7 @@ services:
     <<: *nextcloud
     container_name: nextcloud
     ports:
-      - 5080:80
+      - 127.0.0.1:5080:80
     environment:
       # database
       - POSTGRES_HOST=db
@@ -75,13 +76,30 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
       - MAIL_DOMAIN=${MAIL_DOMAIN}
+      # reverse proxy: client IPs come only from X-Forwarded-For (see readme)
+      - APACHE_DISABLE_REWRITE_IP=1
     dns:
       - ${DNS_SERVER}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/status.php | grep -q '\"installed\":true,\"maintenance\":false,\"needsDbUpgrade\":false'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10m
+      start_interval: 5s
 
   cron:
     <<: *nextcloud
     container_name: nextcloud-cron
     entrypoint: /cron.sh
+    # replaces the anchor's depends_on: wait for app so cron never runs mid-upgrade
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
 
 networks:
   default:
