@@ -7,7 +7,7 @@ A Docker Compose stack running [Nextcloud](https://nextcloud.com/) with PostgreS
 | Service | Image | Port |
 |---|---|---|
 | `app` | `nextcloud:33.0.5` | `5080` → 80 |
-| `db` | `postgres:15.17-bookworm` | `5432` → 5432 |
+| `db` | `postgres:15.17-bookworm` | `127.0.0.1:5432` → 5432 |
 | `redis` | `redis:7.4.8-bookworm` | — |
 | `cron` | `nextcloud:33.0.5` | — |
 
